@@ -75,7 +75,7 @@ private:
     SkImageInfo     fInfo;  // only defined between beginRecording() and endRecording()
     std::unique_ptr<SkRandomAccessWStream> fWStream;
     int64_t         fCurrentPTS, fDeltaPTS;
-
+    int                 fStreamIndex = -1;
     // Lazily allocated, iff the client has called beginFrame() for a given recording session.
     sk_sp<SkSurface> fSurface;
 

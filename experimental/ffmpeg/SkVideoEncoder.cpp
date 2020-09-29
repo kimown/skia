@@ -10,6 +10,7 @@
 #include "include/core/SkImage.h"
 #include "include/core/SkYUVAIndex.h"
 #include "include/private/SkTDArray.h"
+#include "include/core/SkBitmap.h"
 
 extern "C" {
 #include "libswscale/swscale.h"
@@ -255,7 +256,28 @@ bool SkVideoEncoder::beginRecording(SkISize dim, int fps) {
     return fSWScaleCtx != nullptr;
 }
 
+void writeFile(const SkBitmap& bmp1, int fStreamIndex){
+    char buffer[2048];
+    snprintf(buffer, sizeof(buffer), "/tmp/frame_%d.rgba",fStreamIndex);
+
+//    FILE *f = fopen("frame_1.rgba", "w+b");
+    FILE *f = fopen(buffer, "w+b");
+    if (f != NULL) {
+        const size_t bytes_to_write = bmp1.height() * bmp1.rowBytes();
+
+        if (fwrite(bmp1.getPixels(), 1, bytes_to_write, f) != bytes_to_write) {
+            printf("[-] Unable to write %zu bytes to the output file\n",bytes_to_write);
+        } else {
+            printf("[+] Successfully wrote %zu bytes \n", bytes_to_write);
+        }
+        fclose(f);
+    } else {
+        printf("[-] Unable to open output file \n");
+    }
+}
+
 bool SkVideoEncoder::addFrame(const SkPixmap& pm) {
+    fStreamIndex = fStreamIndex+1;
     if (!is_valid(pm.dimensions())) {
         return false;
     }
@@ -266,6 +288,12 @@ bool SkVideoEncoder::addFrame(const SkPixmap& pm) {
     if (check_err(av_frame_make_writable(fFrame))) {
         return false;
     }
+    SkBitmap bitmap;
+    printf("before installPixels\n");
+    bool installed = bitmap.installPixels(pm);
+    printf("install " "%s" "successful\n", installed ? "" : "not ");
+
+    writeFile(bitmap,fStreamIndex);
 
     fFrame->pts = fCurrentPTS;
     fCurrentPTS += fDeltaPTS;

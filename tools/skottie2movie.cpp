@@ -40,6 +40,36 @@ struct AsyncRec {
     SkVideoEncoder* encoder;
 };
 
+void writeFile2(const SkBitmap& bmp1, int fStreamIndex){
+    char buffer[2048];
+    snprintf(buffer, sizeof(buffer), "frame_%d.bgra",fStreamIndex);
+    //    FILE *f = fopen("frame_1.rgba", "w+b");
+    FILE *f = fopen(buffer, "w+b");
+    if (f != NULL) {
+        const size_t bytes_to_write = bmp1.height() * bmp1.rowBytes();
+
+        if (fwrite(bmp1.getPixels(), 1, bytes_to_write, f) != bytes_to_write) {
+            printf("[-] Unable to write %zu bytes to the output file, %s\n",bytes_to_write, buffer);
+        } else {
+            printf("[+] Successfully wrote %zu bytes , %s\n", bytes_to_write, buffer);
+        }
+        fclose(f);
+    } else {
+        printf("[-] Unable to open output file \n");
+    }
+}
+
+int fStreamIndex = 1;
+
+void writePix(const SkPixmap& pm){
+    SkBitmap bitmap;
+    printf("before installPixels\n");
+    bool installed = bitmap.installPixels(pm);
+    printf("install " "%s" "successful\n", installed ? "" : "not ");
+    writeFile2(bitmap,fStreamIndex);
+    fStreamIndex+=1;
+}
+
 int main(int argc, char** argv) {
     SkGraphics::Init();
 
@@ -139,7 +169,8 @@ int main(int argc, char** argv) {
                                          std::unique_ptr<const SkSurface::AsyncReadResult> result) {
                     if (result && result->count() == 1) {
                         AsyncRec* rec = reinterpret_cast<AsyncRec*>(ctx);
-                        rec->encoder->addFrame({rec->info, result->data(0), result->rowBytes(0)});
+                        writePix({rec->info, result->data(0), result->rowBytes(0)});
+//                        rec->encoder->addFrame({rec->info, result->data(0), result->rowBytes(0)});
                     }
                 };
                 surf->asyncRescaleAndReadPixels(info, {0, 0, info.width(), info.height()},
@@ -150,10 +181,11 @@ int main(int argc, char** argv) {
             } else {
                 SkPixmap pm;
                 SkAssertResult(surf->peekPixels(&pm));
-                encoder.addFrame(pm);
+//                encoder.addFrame(pm);
+                writePix(pm);
             }
         }
-        data = encoder.endRecording();
+//        data = encoder.endRecording();
 
         if (FLAGS_loop) {
             double loop_dur = SkTime::GetSecs() - loop_start;
@@ -167,11 +199,11 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    SkFILEWStream ostream(FLAGS_output[0]);
-    if (!ostream.isValid()) {
-        SkDebugf("Can't create output file %s\n", FLAGS_output[0]);
-        return -1;
-    }
-    ostream.write(data->data(), data->size());
+//    SkFILEWStream ostream(FLAGS_output[0]);
+//    if (!ostream.isValid()) {
+//        SkDebugf("Can't create output file %s\n", FLAGS_output[0]);
+//        return -1;
+//    }
+//    ostream.write(data->data(), data->size());
     return 0;
 }
